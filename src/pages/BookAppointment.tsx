@@ -12,30 +12,33 @@ import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, ArrowRight, CalendarIcon, Clock } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarIcon, Clock, Store } from "lucide-react";
 
 // Import components
 import ServiceCard from "@/components/booking/ServiceCard";
 import TimeSlotPicker from "@/components/booking/TimeSlotPicker";
 import ServiceReviews from "@/components/booking/ServiceReviews";
 import CustomerForm from "@/components/booking/CustomerForm";
+import SalonCard from "@/components/booking/SalonCard";
 
 // Import data and types
-import { Service, TimeSlot, Review } from "@/types/booking";
-import { services, reviews, generateTimeSlots } from "@/data/salonData";
+import { Service, TimeSlot, Review, Salon } from "@/types/booking";
+import { services, reviews, generateTimeSlots, salons, getServicesBySalon } from "@/data/salonData";
 
 const BookAppointment: React.FC = () => {
-  const [selectedTab, setSelectedTab] = useState("services");
+  const [selectedTab, setSelectedTab] = useState("salons");
+  const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [serviceReviews, setServiceReviews] = useState<Review[]>([]);
+  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   
   // Handle date change - regenerate time slots
   useEffect(() => {
     if (selectedDate) {
-      setSelectedTimeSlot(null);
+      setSelectedTimeSlots([]);
       setTimeSlots(generateTimeSlots(selectedDate));
     }
   }, [selectedDate]);
@@ -52,20 +55,59 @@ const BookAppointment: React.FC = () => {
     }
   }, [selectedService]);
   
+  // Filter services when salon is selected
+  useEffect(() => {
+    if (selectedSalon) {
+      const services = getServicesBySalon(selectedSalon.id);
+      setFilteredServices(services);
+    }
+  }, [selectedSalon]);
+  
+  // Handle salon selection
+  const handleSalonSelect = (salonId: string) => {
+    const salon = salons.find((s) => s.id === salonId);
+    setSelectedSalon(salon || null);
+    setSelectedService(null);
+    setSelectedTimeSlots([]);
+  };
+
   // Handle service selection
   const handleServiceSelect = (serviceId: string) => {
-    const service = services.find((s) => s.id === serviceId);
+    const service = filteredServices.find((s) => s.id === serviceId);
     setSelectedService(service || null);
+    setSelectedTimeSlots([]);
   };
   
   // Handle time slot selection
   const handleTimeSlotSelect = (slotId: string) => {
-    setSelectedTimeSlot(slotId);
+    setSelectedTimeSlots(prev => {
+      // If slot is already selected, remove it
+      if (prev.includes(slotId)) {
+        return prev.filter(id => id !== slotId);
+      }
+      
+      // If we've already selected enough slots, replace the last one
+      if (selectedService && prev.length >= getRequiredSlots()) {
+        return [...prev.slice(0, -1), slotId];
+      }
+      
+      // Otherwise add the new slot
+      return [...prev, slotId];
+    });
+  };
+  
+  // Calculate how many time slots are required based on service duration
+  const getRequiredSlots = (): number => {
+    if (!selectedService) return 1;
+    
+    // Each slot is 15 minutes, calculate how many slots we need
+    const slotsNeeded = Math.ceil(selectedService.duration / 15);
+    return slotsNeeded;
   };
   
   // Handle form submission
   const handleSubmit = (formData: any) => {
-    if (!selectedService || !selectedDate || !selectedTimeSlot) {
+    if (!selectedSalon || !selectedService || !selectedDate || selectedTimeSlots.length < getRequiredSlots()) {
       toast({
         title: "Booking Error",
         description: "Please complete all booking details",
@@ -76,30 +118,34 @@ const BookAppointment: React.FC = () => {
     
     // In a real app, this would send data to the backend
     console.log("Booking submitted:", {
+      salon: selectedSalon,
       service: selectedService,
       date: selectedDate,
-      timeSlot: selectedTimeSlot,
+      timeSlots: selectedTimeSlots,
       customerInfo: formData
     });
     
     toast({
       title: "Booking Confirmed!",
       description: `Your ${selectedService.name} appointment has been scheduled.`,
-      variant: "default"  // Changed from "success" to "default" as per the allowed variants
+      variant: "default"  // Using "default" as per the allowed variants
     });
     
     // Reset form
+    setSelectedSalon(null);
     setSelectedService(null);
     setSelectedDate(new Date());
-    setSelectedTimeSlot(null);
-    setSelectedTab("services");
+    setSelectedTimeSlots([]);
+    setSelectedTab("salons");
   };
   
   // Navigation between steps
   const goToNextStep = () => {
-    if (selectedTab === "services" && selectedService) {
+    if (selectedTab === "salons" && selectedSalon) {
+      setSelectedTab("services");
+    } else if (selectedTab === "services" && selectedService) {
       setSelectedTab("datetime");
-    } else if (selectedTab === "datetime" && selectedDate && selectedTimeSlot) {
+    } else if (selectedTab === "datetime" && selectedDate && selectedTimeSlots.length >= getRequiredSlots()) {
       setSelectedTab("details");
     }
   };
@@ -109,6 +155,8 @@ const BookAppointment: React.FC = () => {
       setSelectedTab("datetime");
     } else if (selectedTab === "datetime") {
       setSelectedTab("services");
+    } else if (selectedTab === "services") {
+      setSelectedTab("salons");
     }
   };
   
@@ -123,21 +171,49 @@ const BookAppointment: React.FC = () => {
         </CardHeader>
         <CardContent className="p-6">
           <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-            <TabsList className="grid grid-cols-3 mb-6">
-              <TabsTrigger value="services">
-                1. Select Service
+            <TabsList className="grid grid-cols-4 mb-6">
+              <TabsTrigger value="salons">
+                1. Select Salon
+              </TabsTrigger>
+              <TabsTrigger value="services" disabled={!selectedSalon}>
+                2. Select Service
               </TabsTrigger>
               <TabsTrigger value="datetime" disabled={!selectedService}>
-                2. Date & Time
+                3. Date & Time
               </TabsTrigger>
-              <TabsTrigger value="details" disabled={!selectedService || !selectedDate || !selectedTimeSlot}>
-                3. Your Details
+              <TabsTrigger value="details" disabled={!selectedService || !selectedDate || selectedTimeSlots.length < getRequiredSlots()}>
+                4. Your Details
               </TabsTrigger>
             </TabsList>
             
+            <TabsContent value="salons" className="mt-4 space-y-6 animate-fade-in">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {salons.map((salon) => (
+                  <SalonCard
+                    key={salon.id}
+                    salon={salon}
+                    isSelected={selectedSalon?.id === salon.id}
+                    onClick={handleSalonSelect}
+                  />
+                ))}
+              </div>
+              
+              {selectedSalon && (
+                <div className="mt-6">
+                  <Button 
+                    onClick={goToNextStep} 
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    Continue to Select Service
+                    <ArrowRight size={16} className="ml-2" />
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+            
             <TabsContent value="services" className="mt-4 space-y-6 animate-fade-in">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-                {services.map((service) => (
+                {filteredServices.map((service) => (
                   <ServiceCard
                     key={service.id}
                     service={service}
@@ -204,9 +280,16 @@ const BookAppointment: React.FC = () => {
                       </p>
                       <TimeSlotPicker
                         slots={timeSlots}
-                        selectedSlot={selectedTimeSlot}
+                        selectedSlots={selectedTimeSlots}
                         onSelectSlot={handleTimeSlotSelect}
+                        requiredSlots={getRequiredSlots()}
                       />
+                      {selectedService && (
+                        <p className="text-sm text-muted-foreground mt-3">
+                          This service requires {selectedService.duration} minutes 
+                          ({getRequiredSlots()} slots of 15 minutes each)
+                        </p>
+                      )}
                     </>
                   ) : (
                     <p className="text-muted-foreground">Please select a date first</p>
@@ -225,7 +308,7 @@ const BookAppointment: React.FC = () => {
                 
                 <Button 
                   onClick={goToNextStep} 
-                  disabled={!selectedDate || !selectedTimeSlot}
+                  disabled={!selectedDate || selectedTimeSlots.length < getRequiredSlots()}
                   className="bg-primary hover:bg-primary/90"
                 >
                   Continue to Your Details
@@ -235,11 +318,15 @@ const BookAppointment: React.FC = () => {
             </TabsContent>
             
             <TabsContent value="details" className="animate-fade-in">
-              {selectedService && selectedDate && selectedTimeSlot && (
+              {selectedSalon && selectedService && selectedDate && selectedTimeSlots.length >= getRequiredSlots() && (
                 <>
                   <div className="bg-muted p-4 rounded-lg mb-6">
                     <h3 className="font-medium text-lg">Appointment Summary</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Salon</p>
+                        <p className="font-medium">{selectedSalon.name}</p>
+                      </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Service</p>
                         <p className="font-medium">{selectedService.name}</p>
@@ -248,11 +335,18 @@ const BookAppointment: React.FC = () => {
                         <p className="text-sm text-muted-foreground">Date</p>
                         <p className="font-medium">{format(selectedDate, 'EEEE, MMMM d, yyyy')}</p>
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Time</p>
-                        <p className="font-medium">
-                          {timeSlots.find(s => s.id === selectedTimeSlot)?.time}
-                        </p>
+                    </div>
+                    <div className="mt-2">
+                      <p className="text-sm text-muted-foreground">Time Slots</p>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {selectedTimeSlots.map(slotId => {
+                          const slot = timeSlots.find(s => s.id === slotId);
+                          return slot ? (
+                            <span key={slotId} className="bg-primary/10 text-primary px-2 py-1 rounded-full text-sm">
+                              {slot.time}
+                            </span>
+                          ) : null;
+                        })}
                       </div>
                     </div>
                   </div>
@@ -264,7 +358,7 @@ const BookAppointment: React.FC = () => {
                     <CustomerForm
                       selectedService={selectedService}
                       selectedDate={selectedDate}
-                      selectedTimeSlot={selectedTimeSlot}
+                      selectedTimeSlot={selectedTimeSlots[0]} // For backward compatibility
                       onSubmit={handleSubmit}
                     />
                   </div>

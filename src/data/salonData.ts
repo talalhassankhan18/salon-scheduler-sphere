@@ -1,22 +1,87 @@
+import { Service, Review, TimeSlot, Salon } from "@/types/booking";
 
-import { Service, Review, TimeSlot } from "@/types/booking";
+// Salon data
+export const salons: Salon[] = [
+  {
+    id: "salon1",
+    name: "Gentlemen's Grooming",
+    description: "Exclusive salon for men with premium grooming services",
+    address: "123 Main St, Anytown",
+    phone: "123-456-7890",
+    image: "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?q=80&w=2070&auto=format&fit=crop",
+    type: "men"
+  },
+  {
+    id: "salon2",
+    name: "Ladies' Paradise",
+    description: "Luxury beauty treatments for women",
+    address: "456 Oak Ave, Anytown",
+    phone: "123-456-7891",
+    image: "https://images.unsplash.com/photo-1632345031435-8727f6897d53?q=80&w=2070&auto=format&fit=crop",
+    type: "women"
+  },
+  {
+    id: "salon3",
+    name: "Unisex Style Studio",
+    description: "Premium styling for everyone",
+    address: "789 Pine Blvd, Anytown",
+    phone: "123-456-7892",
+    image: "https://images.unsplash.com/photo-1562322140-8baeececf3df?q=80&w=2069&auto=format&fit=crop",
+    type: "unisex"
+  }
+];
 
+// Services data with salonId added
 export const services: Service[] = [
   {
-    id: "haircut",
-    name: "Premium Haircut",
+    id: "mens-haircut",
+    name: "Men's Haircut",
     description: "Expert styling tailored to your face shape and personal style.",
+    duration: 45,
+    price: 65,
+    image: "https://images.unsplash.com/photo-1560869713-7d0a29430803?q=80&w=2070&auto=format&fit=crop",
+    gender: "men",
+    salonId: "salon1"
+  },
+  {
+    id: "mens-beard-trim",
+    name: "Beard Trim & Shape",
+    description: "Professional beard grooming and styling.",
+    duration: 30,
+    price: 35,
+    image: "https://images.unsplash.com/photo-1622296089863-eb7fc530daa9?q=80&w=2070&auto=format&fit=crop",
+    gender: "men",
+    salonId: "salon1"
+  },
+  {
+    id: "womens-haircut",
+    name: "Women's Haircut",
+    description: "Professional cut and style for any hair length.",
     duration: 60,
-    price: 85,
-    image: "https://images.unsplash.com/photo-1560869713-7d0a29430803?q=80&w=2070&auto=format&fit=crop"
+    price: 90,
+    image: "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?q=80&w=2071&auto=format&fit=crop",
+    gender: "women",
+    salonId: "salon2"
   },
   {
     id: "color",
-    name: "Color Treatment",
+    name: "Hair Color Treatment",
     description: "Vibrant, long-lasting color using premium products for healthy hair.",
     duration: 120,
     price: 120,
-    image: "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?q=80&w=2071&auto=format&fit=crop"
+    image: "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?q=80&w=2071&auto=format&fit=crop",
+    gender: "women",
+    salonId: "salon2"
+  },
+  {
+    id: "unisex-haircut",
+    name: "Unisex Haircut",
+    description: "Professional haircut suitable for all genders.",
+    duration: 60,
+    price: 75,
+    image: "https://images.unsplash.com/photo-1560869713-7d0a29430803?q=80&w=2070&auto=format&fit=crop",
+    gender: "unisex",
+    salonId: "salon3"
   },
   {
     id: "blowout",
@@ -24,7 +89,9 @@ export const services: Service[] = [
     description: "Professional blow dry and styling for any occasion.",
     duration: 45,
     price: 65,
-    image: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?q=80&w=1976&auto=format&fit=crop"
+    image: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?q=80&w=1976&auto=format&fit=crop",
+    gender: "unisex",
+    salonId: "salon3"
   },
   {
     id: "facial",
@@ -32,7 +99,9 @@ export const services: Service[] = [
     description: "Customized facial treatment to rejuvenate and nourish your skin.",
     duration: 90,
     price: 110,
-    image: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=2070&auto=format&fit=crop"
+    image: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=2070&auto=format&fit=crop",
+    gender: "unisex",
+    salonId: "salon3"
   }
 ];
 
@@ -79,14 +148,14 @@ export const reviews: Review[] = [
   }
 ];
 
-// Generate time slots for a given day
+// Update time slots generation for new working hours: 10 AM to 10 PM
 export const generateTimeSlots = (date: Date): TimeSlot[] => {
   const slots: TimeSlot[] = [];
-  const openingHour = 9; // 9 AM
-  const closingHour = 17; // 5 PM
+  const openingHour = 10; // 10 AM
+  const closingHour = 22; // 10 PM
   
   // Mock bookings - some slots will be marked as unavailable
-  const bookedSlots = ["9:00", "11:30", "13:45", "15:00", "16:30"];
+  const bookedSlots = ["10:00", "11:30", "13:45", "15:00", "16:30", "19:00", "20:15"];
   
   for (let hour = openingHour; hour < closingHour; hour++) {
     for (let minute = 0; minute < 60; minute += 15) {
@@ -111,4 +180,9 @@ export const formatTime = (time: string): string => {
   const minute = minuteStr;
   
   return `${hour % 12 || 12}:${minute} ${hour >= 12 ? 'PM' : 'AM'}`;
+};
+
+// Function to get services by salon ID and optionally filter by gender
+export const getServicesBySalon = (salonId: string): Service[] => {
+  return services.filter(service => service.salonId === salonId);
 };
