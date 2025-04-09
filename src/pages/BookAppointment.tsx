@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format, addDays } from "date-fns";
 import { 
@@ -86,7 +85,7 @@ const BookAppointment: React.FC = () => {
     toast({
       title: "Booking Confirmed!",
       description: `Your ${selectedService.name} appointment has been scheduled.`,
-      variant: "success"
+      variant: "default"  // Changed from "success" to "default" as per the allowed variants
     });
     
     // Reset form
