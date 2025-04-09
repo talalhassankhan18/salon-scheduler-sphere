@@ -18,12 +18,15 @@ export interface Salon {
   phone: string;
   image?: string;
   type: "men" | "women" | "unisex"; // Salon type
+  capacity?: number; // Added to track how many appointments can be scheduled in parallel
 }
 
 export interface TimeSlot {
   id: string;
   time: string; // format: "HH:MM"
   isAvailable: boolean;
+  bookedCount?: number; // Number of appointments booked for this slot
+  capacityReached?: boolean; // Whether the slot has reached capacity
 }
 
 export interface Review {

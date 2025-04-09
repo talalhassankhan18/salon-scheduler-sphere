@@ -3,7 +3,7 @@ import React from "react";
 import { Salon } from "@/types/booking";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { BadgeCheck } from "lucide-react";
+import { BadgeCheck, Users } from "lucide-react";
 
 interface SalonCardProps {
   salon: Salon;
@@ -50,6 +50,12 @@ const SalonCard: React.FC<SalonCardProps> = ({ salon, isSelected, onClick }) => 
           <span className="text-xs text-muted-foreground">
             {salon.address}
           </span>
+          {salon.capacity && (
+            <span className="text-xs flex items-center text-muted-foreground">
+              <Users className="h-3 w-3 mr-1" /> 
+              Capacity: {salon.capacity} 
+            </span>
+          )}
           {isSelected && (
             <BadgeCheck className="h-5 w-5 text-primary" />
           )}

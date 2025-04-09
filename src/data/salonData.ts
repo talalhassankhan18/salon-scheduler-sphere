@@ -1,3 +1,4 @@
+
 import { Service, Review, TimeSlot, Salon } from "@/types/booking";
 
 // Salon data
@@ -9,7 +10,8 @@ export const salons: Salon[] = [
     address: "123 Main St, Anytown",
     phone: "123-456-7890",
     image: "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?q=80&w=2070&auto=format&fit=crop",
-    type: "men"
+    type: "men",
+    capacity: 3 // Can serve 3 clients at once
   },
   {
     id: "salon2",
@@ -18,7 +20,8 @@ export const salons: Salon[] = [
     address: "456 Oak Ave, Anytown",
     phone: "123-456-7891",
     image: "https://images.unsplash.com/photo-1632345031435-8727f6897d53?q=80&w=2070&auto=format&fit=crop",
-    type: "women"
+    type: "women",
+    capacity: 4 // Can serve 4 clients at once
   },
   {
     id: "salon3",
@@ -27,7 +30,8 @@ export const salons: Salon[] = [
     address: "789 Pine Blvd, Anytown",
     phone: "123-456-7892",
     image: "https://images.unsplash.com/photo-1562322140-8baeececf3df?q=80&w=2069&auto=format&fit=crop",
-    type: "unisex"
+    type: "unisex",
+    capacity: 5 // Can serve 5 clients at once
   }
 ];
 
@@ -148,24 +152,48 @@ export const reviews: Review[] = [
   }
 ];
 
+// Mock bookings for capacity management demonstration
+const mockBookings = [
+  { slotTime: "10:00", count: 2 },  // 2 bookings at 10:00
+  { slotTime: "11:30", count: 3 },  // 3 bookings at 11:30 (full for some salons)
+  { slotTime: "13:45", count: 2 },  // 2 bookings at 13:45
+  { slotTime: "15:00", count: 4 },  // 4 bookings at 15:00 (full for most salons)
+  { slotTime: "16:30", count: 1 },  // 1 booking at 16:30
+  { slotTime: "19:00", count: 3 },  // 3 bookings at 19:00
+  { slotTime: "20:15", count: 2 },  // 2 bookings at 20:15
+];
+
 // Update time slots generation for new working hours: 10 AM to 10 PM
-export const generateTimeSlots = (date: Date): TimeSlot[] => {
+export const generateTimeSlots = (date: Date, selectedSalon?: Salon | null): TimeSlot[] => {
   const slots: TimeSlot[] = [];
   const openingHour = 10; // 10 AM
   const closingHour = 22; // 10 PM
   
-  // Mock bookings - some slots will be marked as unavailable
-  const bookedSlots = ["10:00", "11:30", "13:45", "15:00", "16:30", "19:00", "20:15"];
+  const salonCapacity = selectedSalon?.capacity || 3; // Default capacity if not specified
+  
+  // Completely booked slots (no one can book)
+  const fullyBookedSlots = ["12:15", "14:30", "21:00"];
   
   for (let hour = openingHour; hour < closingHour; hour++) {
     for (let minute = 0; minute < 60; minute += 15) {
       const timeString = `${hour}:${minute === 0 ? '00' : minute}`;
-      const isAvailable = !bookedSlots.includes(timeString);
+      
+      // Check if this slot is in fully booked list
+      const isFullyBooked = fullyBookedSlots.includes(timeString);
+      
+      // Find if there are any bookings for this slot
+      const booking = mockBookings.find(b => b.slotTime === timeString);
+      const bookedCount = booking ? booking.count : 0;
+      
+      // Check if capacity is reached based on the selected salon
+      const capacityReached = bookedCount >= salonCapacity;
       
       slots.push({
         id: `${date.toISOString().split('T')[0]}-${timeString}`,
         time: timeString,
-        isAvailable
+        isAvailable: !isFullyBooked,
+        bookedCount,
+        capacityReached
       });
     }
   }
