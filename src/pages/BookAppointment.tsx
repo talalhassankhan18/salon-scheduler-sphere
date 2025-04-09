@@ -23,7 +23,7 @@ import SalonCard from "@/components/booking/SalonCard";
 
 // Import data and types
 import { Service, TimeSlot, Review, Salon } from "@/types/booking";
-import { services, reviews, generateTimeSlots, getServicesBySalon, addBooking, salons } from "@/data/salonData";
+import { services, reviews, generateTimeSlots, getServicesBySalon, addBooking } from "@/data/salonData";
 
 const BookAppointment: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState("salons");
@@ -76,6 +76,7 @@ const BookAppointment: React.FC = () => {
     }
   };
 
+  // Handle service selection
   const handleServiceSelect = (serviceId: string) => {
     const service = filteredServices.find((s) => s.id === serviceId);
     setSelectedService(service || null);

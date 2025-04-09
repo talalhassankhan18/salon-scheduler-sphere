@@ -36,7 +36,8 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
         
         // Make sure the next slot exists and is available
         if (nextSlotIndex < slots.length && 
-            slots[nextSlotIndex].isAvailable) {
+            slots[nextSlotIndex].isAvailable && 
+            !slots[nextSlotIndex].capacityReached) {
           slotsToSelect.push(slots[nextSlotIndex].id);
         } else {
           canCompleteBooking = false;
@@ -111,7 +112,9 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
             <div className="grid grid-cols-4 sm:grid-cols-4 gap-2">
               {hourSlots.map((slot) => {
                 const isSelected = selectedSlots.includes(slot.id);
-                const isSelectable = slot.isAvailable && (isSelected || canSelectSlot(slot.id));
+                const isSelectable = slot.isAvailable && 
+                  (!slot.capacityReached) && 
+                  (isSelected || canSelectSlot(slot.id));
                 
                 // Determine if this slot is part of a consecutive series
                 const isConsecutive = selectedSlots.length > 1 &&
@@ -135,6 +138,7 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
                     className={slotClass}
                     title={
                       !slot.isAvailable ? "Booked" : 
+                      slot.capacityReached ? "No capacity left" : 
                       isConsecutive ? "Auto-selected based on service duration" :
                       "Available"
                     }
@@ -148,6 +152,11 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
                     {!slot.isAvailable && (
                       <span className="absolute inset-0 flex items-center justify-center bg-[#aaadb0]/20 rounded-md">
                         <X className="h-3 w-3 text-[#999]" />
+                      </span>
+                    )}
+                    {slot.capacityReached && slot.isAvailable && (
+                      <span className="absolute inset-0 flex items-center justify-center bg-[#aaadb0]/20 rounded-md">
+                        <AlertTriangle className="h-3 w-3 text-amber-500" />
                       </span>
                     )}
                   </button>
