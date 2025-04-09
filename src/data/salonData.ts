@@ -1,5 +1,4 @@
-
-import { Service, Review, TimeSlot, Salon } from "@/types/booking";
+import { Service, Review, TimeSlot, Salon, Booking } from "@/types/booking";
 
 // Salon data
 export const salons: Salon[] = [
@@ -152,7 +151,22 @@ export const reviews: Review[] = [
   }
 ];
 
-// Mock bookings for capacity management demonstration
+// Store booked appointments in memory
+const bookedAppointments: Booking[] = [];
+
+// Add a new booking to the system
+export const addBooking = (booking: Booking) => {
+  bookedAppointments.push(booking);
+  console.log("Booking added:", booking);
+  return booking;
+};
+
+// Get all bookings for a specific date
+export const getBookingsForDate = (date: string) => {
+  return bookedAppointments.filter(booking => booking.date === date);
+};
+
+// Mock bookings for capacity management demonstration plus the actual bookings
 const mockBookings = [
   { slotTime: "10:00", count: 2 },  // 2 bookings at 10:00
   { slotTime: "11:30", count: 3 },  // 3 bookings at 11:30 (full for some salons)
@@ -174,6 +188,21 @@ export const generateTimeSlots = (date: Date, selectedSalon?: Salon | null): Tim
   // Completely booked slots (no one can book)
   const fullyBookedSlots = ["12:15", "14:30", "21:00"];
   
+  // Get any bookings for this specific date
+  const dateString = date.toISOString().split('T')[0];
+  const dateBookings = getBookingsForDate(dateString);
+  
+  // Map of time slot to number of bookings
+  const bookedSlotCounts: Record<string, number> = {};
+  
+  // Count bookings for each time slot for the selected date
+  dateBookings.forEach(booking => {
+    booking.timeSlots.forEach(slotId => {
+      const timeString = slotId.split('-').pop() || '';
+      bookedSlotCounts[timeString] = (bookedSlotCounts[timeString] || 0) + 1;
+    });
+  });
+  
   for (let hour = openingHour; hour < closingHour; hour++) {
     for (let minute = 0; minute < 60; minute += 15) {
       const timeString = `${hour}:${minute === 0 ? '00' : minute}`;
@@ -181,17 +210,20 @@ export const generateTimeSlots = (date: Date, selectedSalon?: Salon | null): Tim
       // Check if this slot is in fully booked list
       const isFullyBooked = fullyBookedSlots.includes(timeString);
       
-      // Find if there are any bookings for this slot
-      const booking = mockBookings.find(b => b.slotTime === timeString);
-      const bookedCount = booking ? booking.count : 0;
+      // Find if there are any mock bookings for this slot
+      const mockBooking = mockBookings.find(b => b.slotTime === timeString);
+      
+      // Combine mock bookings with real bookings
+      const realBookingCount = bookedSlotCounts[timeString] || 0;
+      const bookedCount = (mockBooking ? mockBooking.count : 0) + realBookingCount;
       
       // Check if capacity is reached based on the selected salon
       const capacityReached = bookedCount >= salonCapacity;
       
       slots.push({
-        id: `${date.toISOString().split('T')[0]}-${timeString}`,
+        id: `${dateString}-${timeString}`,
         time: timeString,
-        isAvailable: !isFullyBooked,
+        isAvailable: !isFullyBooked && !capacityReached,
         bookedCount,
         capacityReached
       });

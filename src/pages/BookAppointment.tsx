@@ -23,7 +23,7 @@ import SalonCard from "@/components/booking/SalonCard";
 
 // Import data and types
 import { Service, TimeSlot, Review, Salon } from "@/types/booking";
-import { services, reviews, generateTimeSlots, salons, getServicesBySalon } from "@/data/salonData";
+import { services, reviews, generateTimeSlots, getServicesBySalon, addBooking } from "@/data/salonData";
 
 const BookAppointment: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState("salons");
@@ -37,11 +37,11 @@ const BookAppointment: React.FC = () => {
   
   // Handle date change - regenerate time slots
   useEffect(() => {
-    if (selectedDate) {
+    if (selectedDate && selectedSalon) {
       setSelectedTimeSlots([]);
-      setTimeSlots(generateTimeSlots(selectedDate));
+      setTimeSlots(generateTimeSlots(selectedDate, selectedSalon));
     }
-  }, [selectedDate]);
+  }, [selectedDate, selectedSalon]);
   
   // Filter reviews when service is selected
   useEffect(() => {
@@ -69,6 +69,11 @@ const BookAppointment: React.FC = () => {
     setSelectedSalon(salon || null);
     setSelectedService(null);
     setSelectedTimeSlots([]);
+    
+    // Generate time slots based on selected salon's capacity
+    if (selectedDate && salon) {
+      setTimeSlots(generateTimeSlots(selectedDate, salon));
+    }
   };
 
   // Handle service selection
@@ -81,18 +86,18 @@ const BookAppointment: React.FC = () => {
   // Handle time slot selection
   const handleTimeSlotSelect = (slotId: string) => {
     setSelectedTimeSlots(prev => {
-      // If slot is already selected, remove it
+      // If slot is already selected, remove it and any automatically selected slots
       if (prev.includes(slotId)) {
-        return prev.filter(id => id !== slotId);
+        return [];
       }
       
-      // If we've already selected enough slots, replace the last one
-      if (selectedService && prev.length >= getRequiredSlots()) {
-        return [...prev.slice(0, -1), slotId];
+      // If we're starting a new selection, clear previous selections
+      if (prev.length >= getRequiredSlots()) {
+        return [slotId];
       }
       
       // Otherwise add the new slot
-      return [...prev, slotId];
+      return [slotId];
     });
   };
   
@@ -116,6 +121,22 @@ const BookAppointment: React.FC = () => {
       return;
     }
     
+    // Create booking object
+    const newBooking = {
+      id: `booking-${Date.now()}`,
+      salonId: selectedSalon.id,
+      serviceId: selectedService.id,
+      customerName: formData.name,
+      customerEmail: formData.email,
+      customerPhone: formData.phone,
+      date: selectedDate.toISOString().split('T')[0],
+      timeSlots: selectedTimeSlots,
+      notes: formData.notes || ""
+    };
+    
+    // Add booking to the system
+    addBooking(newBooking);
+    
     // In a real app, this would send data to the backend
     console.log("Booking submitted:", {
       salon: selectedSalon,
@@ -128,7 +149,7 @@ const BookAppointment: React.FC = () => {
     toast({
       title: "Booking Confirmed!",
       description: `Your ${selectedService.name} appointment has been scheduled.`,
-      variant: "default"  // Using "default" as per the allowed variants
+      variant: "default"
     });
     
     // Reset form
