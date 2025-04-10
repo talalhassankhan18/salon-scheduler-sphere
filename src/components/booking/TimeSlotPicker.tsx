@@ -1,9 +1,10 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { TimeSlot } from "@/types/booking";
 import { formatTime } from "@/data/salonData";
 import { cn } from "@/lib/utils";
-import { Check, X, Clock } from "lucide-react";
+import { Check, X, Clock, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface TimeSlotPickerProps {
   slots: TimeSlot[];
@@ -18,6 +19,8 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
   onSelectSlot,
   requiredSlots
 }) => {
+  const [notEnoughConsecutiveSlots, setNotEnoughConsecutiveSlots] = useState<boolean>(false);
+  
   // Function to handle slot selection with auto-consecutive selection
   const handleSlotSelection = (slotId: string) => {
     // Find the index of the selected slot
@@ -31,8 +34,10 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
       if (availableConsecutiveSlots.length === requiredSlots) {
         // If we have enough consecutive available slots, select them all
         availableConsecutiveSlots.forEach(slotId => onSelectSlot(slotId));
+        setNotEnoughConsecutiveSlots(false);
       } else {
-        // Not enough consecutive slots, just select this one
+        // Not enough consecutive slots, show warning and select just this one
+        setNotEnoughConsecutiveSlots(true);
         onSelectSlot(slotId);
       }
     } else {
@@ -90,6 +95,15 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
       <p className="text-sm text-muted-foreground mb-3">
         {selectedSlots.length} of {requiredSlots} slots selected
       </p>
+      
+      {notEnoughConsecutiveSlots && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTriangle className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            Not enough consecutive time slots available at this time. Please select another starting time for your service.
+          </AlertDescription>
+        </Alert>
+      )}
       
       <div className="space-y-4">
         {Object.entries(groupedSlots).map(([hour, hourSlots]) => (
